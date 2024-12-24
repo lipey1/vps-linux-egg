@@ -10,7 +10,7 @@
     "description": "Escolha sua distribuição Linux preferida durante a instalação",
     "features": null,
     "docker_images": {
-        "ghcr.io/lipey1/pterodactyl-vps-egg:latest": "ghcr.io/lipey1/pterodactyl-vps-egg:latest"
+        "ghcr.io/lipey1/vps-linux-egg:latest": "ghcr.io/lipey1/vps-linux-egg:latest"
     },
     "file_denylist": [],
     "startup": "bash /entrypoint.sh",
@@ -23,7 +23,7 @@
     "scripts": {
         "installation": {
             "script": "#!\/bin\/bash\r\n\r\ncd \/mnt\/server\r\n\r\n# Executa o script de instalação interativo\r\n./install.sh",
-            "container": "ghcr.io/lipey1/pterodactyl-vps-egg:latest",
+            "container": "ghcr.io/lipey1/vps-linux-egg:latest",
             "entrypoint": "bash"
         }
     },

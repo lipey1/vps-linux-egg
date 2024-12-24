@@ -80,7 +80,7 @@ print_banner() {
     printf "${GREEN}│                                                                                │${NC}\n"
     printf "${GREEN}│                             LINUX - VPS                                        │${NC}\n"
     printf "${GREEN}│                                                                                │${NC}\n"
-    printf "${GREEN}│                           ${RED}© 2021 - 2024 ${PURPLE}@lipey1  ${GREEN}                              │${NC}\n"
+    printf "${GREEN}│                           ${RED}© 2024 - 2025 ${PURPLE}@lipey1  ${GREEN}                              │${NC}\n"
     printf "${GREEN}│                                                                                │${NC}\n"
     printf "${GREEN}╰────────────────────────────────────────────────────────────────────────────────╯${NC}\n"
     printf "                                                                                               \n"

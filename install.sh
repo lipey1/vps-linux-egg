@@ -251,7 +251,7 @@ display_menu() {
     "${colors[GREEN]}│                                                                                │${colors[NC]}\n" \
     "${colors[GREEN]}│                             LINUX - VPS                                        │${colors[NC]}\n" \
     "${colors[GREEN]}│                                                                                │${colors[NC]}\n" \
-    "${colors[GREEN]}│                           ${colors[RED]}© 2021 - 2024 ${colors[PURPLE]}@lipey1 ${colors[GREEN]}                               │${colors[NC]}\n" \
+    "${colors[GREEN]}│                           ${colors[RED]}© 2024 - 2025 ${colors[PURPLE]}@lipey1 ${colors[GREEN]}                               │${colors[NC]}\n" \
     "${colors[GREEN]}│                                                                                │${colors[NC]}\n" \
     "${colors[GREEN]}╰────────────────────────────────────────────────────────────────────────────────╯${colors[NC]}\n\n" \
     "${colors[YELLOW]}Please choose your favorite distro:${colors[NC]}\n\n"

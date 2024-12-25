@@ -202,17 +202,29 @@ install_ssh() {
 
     # Configurar SSH com permissões corretas
     mkdir -p /etc/ssh
-    mkdir -p /var/run/sshd
-    chmod 755 /var/run/sshd
+    mkdir -p /run/sshd
+    chmod 755 /run/sshd
 
-    # Configuração mais básica do SSH
+    # Configuração mais simples do SSH sem recursos que precisam de privilégios especiais
     cat > /etc/ssh/sshd_config <<EOL
 Port ${SSH_PORT:-22}
 ListenAddress 0.0.0.0
 PermitRootLogin yes
 PasswordAuthentication yes
-UsePAM no
+
+# Desabilitar recursos que requerem privilégios especiais
 UsePrivilegeSeparation no
+UsePAM no
+UseChroot no
+ChrootDirectory none
+StrictModes no
+PidFile none
+
+# Configurações básicas
+X11Forwarding no
+PrintMotd no
+AcceptEnv LANG LC_*
+Subsystem sftp internal-sftp
 EOL
 
     chmod 644 /etc/ssh/sshd_config
@@ -220,8 +232,8 @@ EOL
     # Matar qualquer processo SSH existente
     pkill sshd
 
-    # Iniciar SSH em modo debug
-    /usr/sbin/sshd -D -e &
+    # Iniciar SSH em modo debug para ver erros
+    /usr/sbin/sshd -D -d &
 
     log "INFO" "SSH installed and configured successfully" "$GREEN"
     log "INFO" "Port: ${SSH_PORT:-22}" "$GREEN"

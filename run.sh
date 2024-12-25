@@ -205,27 +205,15 @@ install_ssh() {
     mkdir -p /run/sshd
     chmod 755 /run/sshd
 
-    # Configuração minimalista do SSH sem sandbox e recursos privilegiados
+    # Configuração super minimalista do SSH
     cat > /etc/ssh/sshd_config <<EOL
 Port ${SSH_PORT:-22}
 ListenAddress 0.0.0.0
-
-# Autenticação
 PermitRootLogin yes
 PasswordAuthentication yes
-
-# Desabilitar recursos que precisam de privilégios
-UsePrivilegeSeparation no
-UsePAM no
 StrictModes no
-UseLogin yes
-
-# Desabilitar Sandbox e Chroot
-UseBlacklist no
-ChrootDirectory none
+UsePAM no
 UseDNS no
-
-# Configurações básicas
 PrintMotd no
 AcceptEnv LANG LC_*
 Subsystem sftp internal-sftp
@@ -236,8 +224,8 @@ EOL
     # Matar qualquer processo SSH existente
     pkill sshd
 
-    # Iniciar SSH sem privilégios especiais
-    /usr/sbin/sshd -D -e -u 0 &
+    # Iniciar SSH em modo debug para ver erros
+    /usr/sbin/sshd -D -e &
 
     # Aguardar um momento para o serviço iniciar
     sleep 2
@@ -245,15 +233,16 @@ EOL
     # Verificar se o serviço está rodando
     if pgrep sshd > /dev/null; then
         log "INFO" "SSH service is running" "$GREEN"
+        
+        # Mostrar processos SSH
+        log "INFO" "SSH processes:" "$YELLOW"
+        ps aux | grep sshd
+        
+        # Mostrar portas abertas
+        log "INFO" "Open ports:" "$YELLOW"
+        ss -tuln
     else
         log "ERROR" "SSH service failed to start" "$RED"
-    fi
-
-    # Verificar se a porta está aberta (usando ss ao invés de netstat)
-    if ss -tuln | grep ":${SSH_PORT:-22}" > /dev/null; then
-        log "INFO" "SSH port ${SSH_PORT:-22} is listening" "$GREEN"
-    else
-        log "ERROR" "SSH port ${SSH_PORT:-22} is not listening" "$RED"
     fi
 
     log "INFO" "SSH installed and configured successfully" "$GREEN"

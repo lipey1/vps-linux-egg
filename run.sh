@@ -158,38 +158,67 @@ install_wget() {
 
 # Function to install SSH from the repository
 install_ssh() {
-    # Install wget if not found
-    if ! command -v wget &> /dev/null; then
-        log "INFO" "Installing wget." "$YELLOW"
-        install_wget
-    fi
+    distro=$(grep -E '^ID=' /etc/os-release | cut -d= -f2 | tr -d '"')
     
-    log "INFO" "Installing SSH." "$YELLOW"
+    log "INFO" "Installing OpenSSH Server..." "$YELLOW"
     
-    # Determine the architecture
-    arch=$(uname -m)
-    case "$arch" in
-        x86_64)
-            arch="amd64"
+    case "$distro" in
+        "debian"|"ubuntu"|"devuan"|"linuxmint"|"kali")
+            apt-get update -qq && apt-get install -y -qq openssh-server > /dev/null 2>&1
+        ;;
+        "void")
+            xbps-install -Syu -q openssh > /dev/null 2>&1
+        ;;
+        "centos"|"fedora"|"rockylinux"|"almalinux"|"openEuler"|"amzn"|"ol")
+            yum install -y -q openssh-server > /dev/null 2>&1
+        ;;
+        "opensuse"|"opensuse-tumbleweed"|"opensuse-leap")
+            zypper install -y -q openssh > /dev/null 2>&1
+        ;;
+        "alpine"|"chimera")
+            apk add --no-scripts -q openssh > /dev/null 2>&1
+        ;;
+        "gentoo")
+            emerge --sync -q && emerge -q openssh > /dev/null 2>&1
+        ;;
+        "arch")
+            pacman -Syu --noconfirm --quiet openssh > /dev/null 2>&1
+        ;;
+        "slackware")
+            yes | slackpkg install openssh > /dev/null 2>&1
+        ;;
+        *)
+            log "ERROR" "Unsupported distribution: $distro" "$RED"
+            return 1
         ;;
     esac
-    
-    # URL to download the SSH binary
-    url="https://github.com/lipey1/ssh/releases/latest/download/ssh-$arch"
-    
-    # Download the SSH binary
-    wget -q -O /usr/local/bin/ssh "$url" || {
-        log "ERROR" "Failed to download SSH." "$RED"
-        return 1
-    }
-    
-    # Make the binary executable
-    chmod +x /usr/local/bin/ssh || {
-        log "ERROR" "Failed to make ssh executable." "$RED"
-        return 1
-    }    
 
-    log "INFO" "SSH installed successfully." "$GREEN"
+    # Configurar senha root
+    echo "root:vps123" | chpasswd
+
+    # Configurar SSH
+    mkdir -p /etc/ssh
+    cat > /etc/ssh/sshd_config <<EOL
+Port ${SSH_PORT:-22}
+PermitRootLogin yes
+PasswordAuthentication yes
+PubkeyAuthentication yes
+X11Forwarding yes
+PrintMotd no
+AcceptEnv LANG LC_*
+Subsystem       sftp    /usr/lib/openssh/sftp-server
+EOL
+
+    # Criar diretório necessário
+    mkdir -p /var/run/sshd
+
+    # Iniciar serviço SSH
+    /usr/sbin/sshd -D &
+
+    log "INFO" "SSH installed and configured successfully" "$GREEN"
+    log "INFO" "Port: ${SSH_PORT:-22}" "$GREEN"
+    log "INFO" "Username: root" "$GREEN"
+    log "INFO" "Password: vps123" "$GREEN"
 }
 
 # Function to print a beautiful help message
@@ -244,7 +273,6 @@ execute_command() {
             return 0
         ;;
         "install-ssh")
-            install_ssh
             print_prompt "$user"
             return 0
         ;;

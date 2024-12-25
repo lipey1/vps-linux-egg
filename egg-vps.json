@@ -27,7 +27,17 @@
             "entrypoint": "bash"
         }
     },
-    "variables": [],
+    "variables": [
+        {
+            "name": "SSH_PORT",
+            "description": "Porta que será usada para o SSH",
+            "env_variable": "SSH_PORT",
+            "default_value": "22",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|numeric|between:1,65535"
+        }
+    ],
     "container": {
         "privileged": true,
         "oom_disabled": true,

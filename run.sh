@@ -196,24 +196,32 @@ install_ssh() {
     # Configurar senha root
     echo "root:vps123" | chpasswd
 
-    # Configurar SSH
+    # Gerar novas chaves do servidor
+    rm -f /etc/ssh/ssh_host_*
+    ssh-keygen -A
+
+    # Configurar SSH com permissões corretas
     mkdir -p /etc/ssh
+    mkdir -p /var/run/sshd
+    chmod 755 /var/run/sshd
+
+    # Configuração mais básica do SSH
     cat > /etc/ssh/sshd_config <<EOL
 Port ${SSH_PORT:-22}
+ListenAddress 0.0.0.0
 PermitRootLogin yes
 PasswordAuthentication yes
-PubkeyAuthentication yes
-X11Forwarding yes
-PrintMotd no
-AcceptEnv LANG LC_*
-Subsystem       sftp    /usr/lib/openssh/sftp-server
+UsePAM no
+UsePrivilegeSeparation no
 EOL
 
-    # Criar diretório necessário
-    mkdir -p /var/run/sshd
+    chmod 644 /etc/ssh/sshd_config
 
-    # Iniciar serviço SSH
-    /usr/sbin/sshd -D &
+    # Matar qualquer processo SSH existente
+    pkill sshd
+
+    # Iniciar SSH em modo debug
+    /usr/sbin/sshd -D -e &
 
     log "INFO" "SSH installed and configured successfully" "$GREEN"
     log "INFO" "Port: ${SSH_PORT:-22}" "$GREEN"

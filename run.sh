@@ -273,6 +273,7 @@ execute_command() {
             return 0
         ;;
         "install-ssh")
+            install_ssh
             print_prompt "$user"
             return 0
         ;;

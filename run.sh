@@ -160,32 +160,32 @@ install_wget() {
 install_ssh() {
     distro=$(grep -E '^ID=' /etc/os-release | cut -d= -f2 | tr -d '"')
     
-    log "INFO" "Installing OpenSSH Server..." "$YELLOW"
+    log "INFO" "Installing Dropbear SSH Server..." "$YELLOW"
     
     case "$distro" in
         "debian"|"ubuntu"|"devuan"|"linuxmint"|"kali")
-            apt-get update -qq && apt-get install -y -qq openssh-server > /dev/null 2>&1
+            apt-get update -qq && apt-get install -y -qq dropbear > /dev/null 2>&1
         ;;
         "void")
-            xbps-install -Syu -q openssh > /dev/null 2>&1
+            xbps-install -Syu -q dropbear > /dev/null 2>&1
         ;;
         "centos"|"fedora"|"rockylinux"|"almalinux"|"openEuler"|"amzn"|"ol")
-            yum install -y -q openssh-server > /dev/null 2>&1
+            yum install -y -q dropbear > /dev/null 2>&1
         ;;
         "opensuse"|"opensuse-tumbleweed"|"opensuse-leap")
-            zypper install -y -q openssh > /dev/null 2>&1
+            zypper install -y -q dropbear > /dev/null 2>&1
         ;;
         "alpine"|"chimera")
-            apk add --no-scripts -q openssh > /dev/null 2>&1
+            apk add --no-scripts -q dropbear > /dev/null 2>&1
         ;;
         "gentoo")
-            emerge --sync -q && emerge -q openssh > /dev/null 2>&1
+            emerge --sync -q && emerge -q dropbear > /dev/null 2>&1
         ;;
         "arch")
-            pacman -Syu --noconfirm --quiet openssh > /dev/null 2>&1
+            pacman -Syu --noconfirm --quiet dropbear > /dev/null 2>&1
         ;;
         "slackware")
-            yes | slackpkg install openssh > /dev/null 2>&1
+            yes | slackpkg install dropbear > /dev/null 2>&1
         ;;
         *)
             log "ERROR" "Unsupported distribution: $distro" "$RED"
@@ -196,47 +196,31 @@ install_ssh() {
     # Configurar senha root
     echo "root:vps123" | chpasswd
 
-    # Gerar novas chaves do servidor
-    rm -f /etc/ssh/ssh_host_*
-    ssh-keygen -A
-
-    # Configurar SSH com permissões corretas
-    mkdir -p /etc/ssh
-    mkdir -p /run/sshd
-    chmod 755 /run/sshd
-
-    # Configuração super minimalista do SSH
-    cat > /etc/ssh/sshd_config <<EOL
-Port ${SSH_PORT:-22}
-ListenAddress 0.0.0.0
-PermitRootLogin yes
-PasswordAuthentication yes
-StrictModes no
-UsePAM no
-UseDNS no
-PrintMotd no
-AcceptEnv LANG LC_*
-Subsystem sftp internal-sftp
-EOL
-
-    chmod 644 /etc/ssh/sshd_config
+    # Criar diretório para as chaves
+    mkdir -p /etc/dropbear
+    
+    # Gerar chaves do servidor
+    dropbearkey -t rsa -f /etc/dropbear/dropbear_rsa_host_key
+    dropbearkey -t ecdsa -f /etc/dropbear/dropbear_ecdsa_host_key
+    dropbearkey -t ed25519 -f /etc/dropbear/dropbear_ed25519_host_key
 
     # Matar qualquer processo SSH existente
+    pkill dropbear
     pkill sshd
 
-    # Iniciar SSH em modo debug para ver erros
-    /usr/sbin/sshd -D -e &
+    # Iniciar Dropbear
+    dropbear -E -F -p ${SSH_PORT:-22} &
 
     # Aguardar um momento para o serviço iniciar
     sleep 2
 
     # Verificar se o serviço está rodando
-    if pgrep sshd > /dev/null; then
+    if pgrep dropbear > /dev/null; then
         log "INFO" "SSH service is running" "$GREEN"
         
         # Mostrar processos SSH
         log "INFO" "SSH processes:" "$YELLOW"
-        ps aux | grep sshd
+        ps aux | grep dropbear
         
         # Mostrar portas abertas
         log "INFO" "Open ports:" "$YELLOW"

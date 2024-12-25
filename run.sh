@@ -208,31 +208,23 @@ install_ssh() {
     pkill dropbear
     pkill sshd
 
-    # Iniciar Dropbear
+    # Criar script de autorun que será executado no boot
+    cat > "${HOME}/autorun.sh" <<EOL
+#!/bin/bash
+
+# Iniciar SSH se instalado
+if [ -f "/etc/dropbear/dropbear_rsa_host_key" ]; then
     dropbear -E -F -p ${SSH_PORT:-22} &
+fi
+EOL
 
-    # Aguardar um momento para o serviço iniciar
-    sleep 2
+    chmod +x "${HOME}/autorun.sh"
 
-    # Verificar se o serviço está rodando
-    if pgrep dropbear > /dev/null; then
-        log "INFO" "SSH service is running" "$GREEN"
-        
-        # Mostrar processos SSH
-        log "INFO" "SSH processes:" "$YELLOW"
-        ps aux | grep dropbear
-        
-        # Mostrar portas abertas
-        log "INFO" "Open ports:" "$YELLOW"
-        ss -tuln
-    else
-        log "ERROR" "SSH service failed to start" "$RED"
-    fi
+    # Criar marca de instalação do SSH
+    touch "${HOME}/.ssh_installed"
 
-    log "INFO" "SSH installed and configured successfully" "$GREEN"
-    log "INFO" "Port: ${SSH_PORT:-22}" "$GREEN"
-    log "INFO" "Username: root" "$GREEN"
-    log "INFO" "Password: vps123" "$GREEN"
+    # Iniciar o serviço
+    start_ssh
 }
 
 # Function to print a beautiful help message
@@ -330,6 +322,12 @@ printf "${GREEN}root@${HOSTNAME}${NC}:${RED}$(get_formatted_dir)${NC}#\n"
 
 # Execute autorun.sh
 sh "/autorun.sh"
+
+# No início do script, após as definições de cores
+if [ -f "${HOME}/.ssh_installed" ]; then
+    log "INFO" "Found existing SSH installation" "$YELLOW"
+    start_ssh
+fi
 
 # Main command loop
 while true; do

@@ -23,12 +23,18 @@ parse_ports() {
             ;;
         esac
     done <"$config_file"
+    echo "$port_args"
 }
 
 # Execute PRoot environment
 exec_proot() {
     local port_args=$(parse_ports)
     
+    # Iniciar SSH se instalado
+    if [ -f "${HOME}/.ssh_installed" ]; then
+        dropbear -E -F -p ${SSH_PORT:-22} &
+    fi
+
     /usr/local/bin/proot \
     --rootfs="${HOME}" \
     -0 -w "${HOME}" \

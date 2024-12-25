@@ -19,5 +19,16 @@ if [ ! -e "$HOME/.installed" ]; then
     /bin/bash "/install.sh" || exit 1
 fi
 
+# Iniciar SSH se estiver instalado
+if [ -f "/etc/dropbear/dropbear_rsa_host_key" ]; then
+    /usr/local/bin/proot \
+    --rootfs="${HOME}" \
+    -0 -w "${HOME}" \
+    -b /dev -b /sys -b /proc -b /etc/resolv.conf \
+    -p ${SSH_PORT:-22}:${SSH_PORT:-22} \
+    --kill-on-exit \
+    dropbear -E -F -p ${SSH_PORT:-22} &
+fi
+
 # Run the startup helper script
 bash /helper.sh

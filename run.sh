@@ -205,23 +205,16 @@ install_ssh() {
     mkdir -p /run/sshd
     chmod 755 /run/sshd
 
-    # Configuração mais simples do SSH sem recursos que precisam de privilégios especiais
+    # Configuração minimalista do SSH
     cat > /etc/ssh/sshd_config <<EOL
 Port ${SSH_PORT:-22}
 ListenAddress 0.0.0.0
 PermitRootLogin yes
 PasswordAuthentication yes
-
-# Desabilitar recursos que requerem privilégios especiais
-UsePrivilegeSeparation no
 UsePAM no
-UseChroot no
-ChrootDirectory none
 StrictModes no
-PidFile none
 
 # Configurações básicas
-X11Forwarding no
 PrintMotd no
 AcceptEnv LANG LC_*
 Subsystem sftp internal-sftp
@@ -232,8 +225,25 @@ EOL
     # Matar qualquer processo SSH existente
     pkill sshd
 
-    # Iniciar SSH em modo debug para ver erros
-    /usr/sbin/sshd -D -d &
+    # Iniciar SSH com mais detalhes de debug
+    /usr/sbin/sshd -D -ddd &
+
+    # Aguardar um momento para o serviço iniciar
+    sleep 2
+
+    # Verificar se o serviço está rodando
+    if pgrep sshd > /dev/null; then
+        log "INFO" "SSH service is running" "$GREEN"
+    else
+        log "ERROR" "SSH service failed to start" "$RED"
+    fi
+
+    # Verificar se a porta está aberta
+    if netstat -tuln | grep ":${SSH_PORT:-22}" > /dev/null; then
+        log "INFO" "SSH port ${SSH_PORT:-22} is listening" "$GREEN"
+    else
+        log "ERROR" "SSH port ${SSH_PORT:-22} is not listening" "$RED"
+    fi
 
     log "INFO" "SSH installed and configured successfully" "$GREEN"
     log "INFO" "Port: ${SSH_PORT:-22}" "$GREEN"

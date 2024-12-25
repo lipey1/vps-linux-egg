@@ -12,29 +12,6 @@ HOSTNAME="vps"
 HISTORY_FILE="${HOME}/.custom_shell_history"
 MAX_HISTORY=1000
 
-# Primeiro, defina a função start_ssh no início do arquivo
-start_ssh() {
-    log "INFO" "Starting SSH service..." "$YELLOW"
-    
-    # Matar qualquer processo SSH existente
-    pkill dropbear >/dev/null 2>&1
-    
-    # Iniciar Dropbear
-    dropbear -E -F -p ${SSH_PORT:-22} &
-    
-    # Aguardar um momento
-    sleep 2
-    
-    if pgrep dropbear >/dev/null; then
-        log "INFO" "SSH service started successfully" "$GREEN"
-        log "INFO" "Port: ${SSH_PORT:-22}" "$GREEN"
-        log "INFO" "Username: root" "$GREEN"
-        log "INFO" "Password: vps123" "$GREEN"
-    else
-        log "ERROR" "SSH service failed to start" "$RED"
-    fi
-}
-
 # Check if not installed
 if [ ! -e "/.installed" ]; then
     # Check if rootfs.tar.xz or rootfs.tar.gz exists and remove them if they do
@@ -181,6 +158,13 @@ install_wget() {
 
 # Function to install SSH from the repository
 install_ssh() {
+    # Se já estiver instalado, só reinicia
+    if [ -f "/etc/dropbear/dropbear_rsa_host_key" ]; then
+        log "INFO" "SSH already installed, restarting service..." "$YELLOW"
+        start_ssh
+        return 0
+    fi
+
     distro=$(grep -E '^ID=' /etc/os-release | cut -d= -f2 | tr -d '"')
     
     log "INFO" "Installing Dropbear SSH Server..." "$YELLOW"
@@ -219,45 +203,35 @@ install_ssh() {
     # Configurar senha root
     echo "root:vps123" | chpasswd
 
-    # Remover chaves antigas e criar diretório
+    # Limpar e preparar diretório
     rm -rf /etc/dropbear
     mkdir -p /etc/dropbear
     chmod 700 /etc/dropbear
 
-    # Gerar novas chaves com tratamento de erro
+    # Gerar chaves
     log "INFO" "Generating SSH keys..." "$YELLOW"
-    
-    # Gerar chave RSA
-    if ! dropbearkey -t rsa -f /etc/dropbear/dropbear_rsa_host_key.tmp; then
-        log "ERROR" "Failed to generate RSA key" "$RED"
-        return 1
-    fi
-    mv /etc/dropbear/dropbear_rsa_host_key.tmp /etc/dropbear/dropbear_rsa_host_key
-
-    # Gerar chave ECDSA
-    if ! dropbearkey -t ecdsa -f /etc/dropbear/dropbear_ecdsa_host_key.tmp; then
-        log "ERROR" "Failed to generate ECDSA key" "$RED"
-        return 1
-    fi
-    mv /etc/dropbear/dropbear_ecdsa_host_key.tmp /etc/dropbear/dropbear_ecdsa_host_key
-
-    # Gerar chave ED25519
-    if ! dropbearkey -t ed25519 -f /etc/dropbear/dropbear_ed25519_host_key.tmp; then
-        log "ERROR" "Failed to generate ED25519 key" "$RED"
-        return 1
-    fi
-    mv /etc/dropbear/dropbear_ed25519_host_key.tmp /etc/dropbear/dropbear_ed25519_host_key
-
-    # Ajustar permissões
+    dropbearkey -t rsa -f /etc/dropbear/dropbear_rsa_host_key
+    dropbearkey -t ecdsa -f /etc/dropbear/dropbear_ecdsa_host_key
+    dropbearkey -t ed25519 -f /etc/dropbear/dropbear_ed25519_host_key
     chmod 600 /etc/dropbear/*_host_key
+
+    # IMPORTANTE: Criar script de autorun
+    cat > /autorun.sh <<EOL
+#!/bin/bash
+# Auto-start SSH service
+if [ -f "/etc/dropbear/dropbear_rsa_host_key" ]; then
+    pkill dropbear >/dev/null 2>&1
+    sleep 1
+    dropbear -E -F -p ${SSH_PORT:-22} &
+fi
+EOL
+    chmod +x /autorun.sh
 
     # Criar marca de instalação
     touch "${HOME}/.ssh_installed"
 
     # Iniciar o serviço
     start_ssh
-
-    log "INFO" "SSH installation completed" "$GREEN"
 }
 
 # Function to print a beautiful help message
@@ -356,7 +330,36 @@ printf "${GREEN}root@${HOSTNAME}${NC}:${RED}$(get_formatted_dir)${NC}#\n"
 # Execute autorun.sh
 sh "/autorun.sh"
 
-# Main command loop
+# Função para iniciar SSH
+start_ssh() {
+    log "INFO" "Starting SSH service..." "$YELLOW"
+    pkill dropbear >/dev/null 2>&1
+    sleep 1
+    dropbear -E -F -p ${SSH_PORT:-22} &
+    sleep 2
+    
+    if pgrep dropbear >/dev/null; then
+        log "INFO" "SSH service started successfully" "$GREEN"
+        log "INFO" "Port: ${SSH_PORT:-22}" "$GREEN"
+        log "INFO" "Username: root" "$GREEN"
+        log "INFO" "Password: vps123" "$GREEN"
+    else
+        log "ERROR" "SSH service failed to start" "$RED"
+    fi
+}
+
+# PRIMEIRA COISA: Verificar se SSH já está instalado e iniciar
+if [ -f "/etc/dropbear/dropbear_rsa_host_key" ]; then
+    log "INFO" "Found existing SSH installation, starting service..." "$YELLOW"
+    start_ssh
+fi
+
+# IMPORTANTE: Adicionar isto no final do arquivo, antes do loop principal
+if [ -f "/etc/dropbear/dropbear_rsa_host_key" ]; then
+    start_ssh
+fi
+
+# Loop principal
 while true; do
     run_prompt "user"
 done

@@ -233,19 +233,6 @@ install_ssh() {
     log "INFO" "Port: ${SSH_PORT:-22}" "$GREEN"
     log "INFO" "Username: root" "$GREEN"
     log "INFO" "Password: vps123" "$GREEN"
-
-    # Criar script de autorun
-    cat > /autorun.sh <<EOL
-#!/bin/bash
-
-# Iniciar SSH se instalado
-if [ -f "/etc/dropbear/dropbear_rsa_host_key" ]; then
-    dropbear -E -F -p ${SSH_PORT:-22} &
-fi
-EOL
-
-    # Tornar o script executável
-    chmod +x /autorun.sh
 }
 
 # Function to print a beautiful help message
@@ -343,6 +330,30 @@ printf "${GREEN}root@${HOSTNAME}${NC}:${RED}$(get_formatted_dir)${NC}#\n"
 
 # Execute autorun.sh
 sh "/autorun.sh"
+
+# Function to setup environment
+setup_environment() {
+    # Configurar hostname
+    HOSTNAME="vps-$(hostname | cut -c1-8)"
+    echo "$HOSTNAME" > /etc/hostname
+    hostname "$HOSTNAME"
+
+    # Atualizar /etc/hosts se necessário
+    if ! grep -q "$HOSTNAME" /etc/hosts; then
+        cat > /etc/hosts <<EOL
+127.0.0.1 localhost
+127.0.0.1 $HOSTNAME
+EOL
+    fi
+
+    # Carregar configurações de ambiente
+    if [ -f "/etc/profile.d/ssh-env.sh" ]; then
+        source /etc/profile.d/ssh-env.sh
+    fi
+}
+
+# Antes do loop principal
+setup_environment
 
 # Main command loop
 while true; do

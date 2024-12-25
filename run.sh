@@ -233,6 +233,19 @@ install_ssh() {
     log "INFO" "Port: ${SSH_PORT:-22}" "$GREEN"
     log "INFO" "Username: root" "$GREEN"
     log "INFO" "Password: vps123" "$GREEN"
+
+    # Criar script de autorun
+    cat > /autorun.sh <<EOL
+#!/bin/bash
+
+# Iniciar SSH se instalado
+if [ -f "/etc/dropbear/dropbear_rsa_host_key" ]; then
+    dropbear -E -F -p ${SSH_PORT:-22} &
+fi
+EOL
+
+    # Tornar o script executável
+    chmod +x /autorun.sh
 }
 
 # Function to print a beautiful help message
